@@ -1,7 +1,7 @@
 [project]
 name = "cudo-compute-sdk"
 version = "0.0.1"
-description = "The Cudo Compute SDK."
+description = "The Python SDK for Cudo Compute distributed compute platform."
 authors = [
     {name = "jamesbeedy", email = "james@vantagecompute.ai"}
 ]

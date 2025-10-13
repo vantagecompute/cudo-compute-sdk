@@ -23,19 +23,17 @@ A Python SDK for the Cudo Compute Platform API.
 
 </br>
 
-## 🚀 Quick Start
-
 </div>
 
 A Python SDK for interacting with the [Cudo Compute](https://www.cudocompute.com/) REST API. Manage virtual machines, storage, networks, and other cloud resources programmatically.
 
 ## Features
 
-- 🚀 **Async/Await Support** - Built on `httpx` for efficient async operations
-- 🔒 **Type Safe** - Comprehensive type hints with Pydantic models
-- 📦 **Full API Coverage** - Complete support for VMs, storage, networking, and more
-- 🧪 **Well Tested** - 112 tests with 78% code coverage
-- 📚 **Great Documentation** - Detailed docs with examples
+- **Async/Await Support** - Built on `httpx` for efficient async operations
+- **Type Safe** - Comprehensive type hints with Pydantic models
+- **Full API Coverage** - Complete support for VMs, storage, networking, and more
+- **Well Tested** - 112 tests with 78% code coverage
+- **Great Documentation** - Detailed docs with examples
 
 ## Installation
 

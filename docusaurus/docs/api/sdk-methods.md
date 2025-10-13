@@ -11,12 +11,12 @@ This documentation is auto-generated from the SDK source code docstrings.
 
 SDK for interacting with the Cudo Compute REST API.
 
-This SDK provides methods to manage virtual machines, data centers,
-machine types, images, networks, and other cloud resources on Cudo Compute.
+    This SDK provides methods to manage virtual machines, data centers,
+    machine types, images, networks, and other cloud resources on Cudo Compute.
 
-Authentication is done via bearer token (API key).
+    Authentication is done via bearer token (API key).
 
-API Base URL: https://rest.compute.cudo.org
+    API Base URL: https://rest.compute.cudo.org
 
 ### Projects
 

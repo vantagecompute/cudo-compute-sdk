@@ -61,6 +61,8 @@ const config: Config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/vantagecompute/cudo-compute-sdk/tree/main/docs/',
+          sidebarCollapsible: true,
+          sidebarCollapsed: false,
         },
         blog: false,
         theme: {

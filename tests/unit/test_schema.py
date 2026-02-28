@@ -24,6 +24,7 @@ from cudo_compute_sdk.schema import (
     DataCenter,
     Disk,
     DiskPoolPricing,
+    GpuModel,
     Image,
     InstalledPackage,
     Location,
@@ -306,6 +307,31 @@ class TestSecurityGroup:
         assert sg.id == "sg-123"
         assert sg.description == "Web server security group"
         assert len(sg.rules) == 2
+
+
+class TestGpuModel:
+    def test_gpu_model_valid(self):
+        gm = GpuModel(
+            id="nvidia-a100-pcie",
+            vendorName="NVIDIA",
+            modelName="A100 80GB PCIe",
+            memoryGib=80,
+        )
+        assert gm.id == "nvidia-a100-pcie"
+        assert gm.vendor_name == "NVIDIA"
+        assert gm.model_name == "A100 80GB PCIe"
+        assert gm.memory_gib == 80
+
+    def test_gpu_model_minimal(self):
+        gm = GpuModel(id="test-gpu")
+        assert gm.id == "test-gpu"
+        assert gm.vendor_name is None
+        assert gm.model_name is None
+        assert gm.memory_gib is None
+
+    def test_gpu_model_required_id(self):
+        with pytest.raises(ValidationError):
+            GpuModel()
 
 
 class TestVMMachineTypePrice:

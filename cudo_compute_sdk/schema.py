@@ -231,6 +231,22 @@ class SecurityGroup(BaseModel):
 
 
 # ============================================================================
+# GPU Model
+# ============================================================================
+
+
+class GpuModel(BaseModel):
+    """GPU model available for virtual machines."""
+
+    id: str
+    vendor_name: Optional[str] = Field(None, alias="vendorName")
+    model_name: Optional[str] = Field(None, alias="modelName")
+    memory_gib: Optional[int] = Field(None, alias="memoryGib")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+# ============================================================================
 # VM Machine Type Models
 # ============================================================================
 

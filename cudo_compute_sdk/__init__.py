@@ -28,6 +28,7 @@ from .schema import (
     Cluster,
     DataCenter,
     Disk,
+    GpuModel,
     Image,
     Machine,
     MachineType,
@@ -538,16 +539,17 @@ class CudoComputeSDK:
         else:
             raise ValueError(f"Unexpected response type: {type(data)}, data: {str(data)[:200]}")
 
-    async def list_vm_gpu_models(self) -> List[Dict[str, Any]]:
+    async def list_vm_gpu_models(self) -> List[GpuModel]:
         """List all GPU models available for virtual machines.
 
         Returns:
-            List of GPU model dictionaries
+            List of GpuModel instances
         """
         response = await self.client.get("/v1/vms/gpu-models")
         response.raise_for_status()
         data = response.json()
-        return data.get("gpuModels", [])
+        gpu_models = data.get("gpuModels", [])
+        return [GpuModel(**gm) for gm in gpu_models]
 
     # ========================================================================
     # Bare-Metal Machine Types
@@ -2056,6 +2058,60 @@ class CudoComputeSDK:
                 return dc
         raise ValueError(f"Data center '{data_center_id}' not found")
 
+    async def get_datacenters(self) -> List[VMDataCenter]:
+        """List all available data centers.
+
+        Convenience method that returns all data centers available
+        for virtual machines.
+
+        Returns:
+            List of VMDataCenter model instances
+        """
+        return await self.list_vm_data_centers()
+
+    async def get_gpus_for_datacenter(
+        self,
+        datacenter_id: str,
+    ) -> List[VMMachineType]:
+        """Get GPU machine types available in a specific data center.
+
+        Uses the /v1/vms/machine-types endpoint with dataCenterId filter
+        (server-side) and then filters client-side to only machine types
+        that have a GPU model and available GPU capacity.
+
+        Args:
+            datacenter_id: Data center ID to query
+
+        Returns:
+            List of VMMachineType instances that have GPUs available
+        """
+        all_types = await self.list_vm_machine_types(data_center_id=datacenter_id)
+        return [
+            mt
+            for mt in all_types
+            if mt.gpu_model
+            and mt.gpu_model != ""
+            and (mt.total_gpu_free is None or mt.total_gpu_free > 0)
+        ]
+
+    async def get_metal_nodes_for_datacenter(
+        self,
+        datacenter_id: str,
+    ) -> List[MachineType]:
+        """Get bare-metal machine types available in a specific data center.
+
+        Retrieves all bare-metal machine types and filters to only those
+        in the given data center.
+
+        Args:
+            datacenter_id: Data center ID to query
+
+        Returns:
+            List of MachineType instances for the data center
+        """
+        all_types = await self.list_machine_types()
+        return [mt for mt in all_types if mt.data_center_id == datacenter_id]
+
 
 # Singleton instance factory
 _sdk_instance: Optional[CudoComputeSDK] = None
@@ -2085,6 +2141,7 @@ __all__ = [
     "Cluster",
     "DataCenter",
     "Disk",
+    "GpuModel",
     "Image",
     "Machine",
     "MachineType",

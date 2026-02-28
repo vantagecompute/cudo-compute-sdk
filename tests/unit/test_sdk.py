@@ -908,6 +908,209 @@ class TestClusters:
             assert result["cluster"]["id"] == "cluster-new"
 
 
+class TestListVMGpuModels:
+    @pytest.mark.asyncio
+    async def test_list_vm_gpu_models(self, sdk, mock_response):
+        """Test list_vm_gpu_models returns typed GpuModel objects."""
+        mock_data = {
+            "gpuModels": [
+                {
+                    "id": "nvidia-a100-pcie",
+                    "vendorName": "NVIDIA",
+                    "modelName": "A100 80GB PCIe",
+                    "memoryGib": 80,
+                },
+                {
+                    "id": "nvidia-h100-sxm",
+                    "vendorName": "NVIDIA",
+                    "modelName": "H100 SXM",
+                    "memoryGib": 80,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            from cudo_compute_sdk.schema import GpuModel
+
+            models = await sdk.list_vm_gpu_models()
+            assert len(models) == 2
+            assert isinstance(models[0], GpuModel)
+            assert models[0].id == "nvidia-a100-pcie"
+            assert models[0].vendor_name == "NVIDIA"
+            assert models[0].model_name == "A100 80GB PCIe"
+            assert models[0].memory_gib == 80
+            assert models[1].id == "nvidia-h100-sxm"
+            mock_get.assert_called_once_with("/v1/vms/gpu-models")
+
+    @pytest.mark.asyncio
+    async def test_list_vm_gpu_models_empty(self, sdk, mock_response):
+        """Test list_vm_gpu_models returns empty list when no models."""
+        mock_data = {"gpuModels": []}
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            models = await sdk.list_vm_gpu_models()
+            assert len(models) == 0
+
+
+class TestGetDatacenters:
+    @pytest.mark.asyncio
+    async def test_get_datacenters(self, sdk, mock_response):
+        """Test get_datacenters returns all data centers."""
+        mock_data = {
+            "dataCenters": [
+                {"id": "dc-1", "supplierName": "Cudo"},
+                {"id": "dc-2", "supplierName": "Partner"},
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            dcs = await sdk.get_datacenters()
+            assert len(dcs) == 2
+            assert dcs[0].id == "dc-1"
+            assert dcs[1].supplier_name == "Partner"
+            mock_get.assert_called_once_with("/v1/vms/data-centers")
+
+    @pytest.mark.asyncio
+    async def test_get_gpus_for_datacenter(self, sdk, mock_response):
+        """Test get_gpus_for_datacenter filters to GPU machine types in a datacenter."""
+        # Mock data simulates server-side filtering by dataCenterId=dc-1
+        mock_data = {
+            "machineTypes": [
+                {
+                    "dataCenterId": "dc-1",
+                    "machineType": "intel-broadwell",
+                    "cpuModel": "Broadwell",
+                    "gpuModel": "",
+                    "gpuModelId": "",
+                    "totalGpuFree": 0,
+                },
+                {
+                    "dataCenterId": "dc-1",
+                    "machineType": "epyc-genoa-a100",
+                    "cpuModel": "AMD EPYC",
+                    "gpuModel": "A100 80GB PCIe",
+                    "gpuModelId": "nvidia-a100-pcie",
+                    "totalGpuFree": 8,
+                },
+                {
+                    "dataCenterId": "dc-1",
+                    "machineType": "sapphire-rapids-h100",
+                    "cpuModel": "Intel Xeon",
+                    "gpuModel": "H100 SXM",
+                    "gpuModelId": "nvidia-h100",
+                    "totalGpuFree": 5,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            gpus = await sdk.get_gpus_for_datacenter(datacenter_id="dc-1")
+            # Should only return GPU types for dc-1
+            assert len(gpus) == 2
+            assert gpus[0].gpu_model == "A100 80GB PCIe"
+            assert gpus[1].gpu_model == "H100 SXM"
+            # Verify the API was called with dataCenterId param
+            call_args = mock_get.call_args
+            assert call_args[1]["params"]["dataCenterId"] == "dc-1"
+
+    @pytest.mark.asyncio
+    async def test_get_gpus_for_datacenter_no_gpus(self, sdk, mock_response):
+        """Test get_gpus_for_datacenter returns empty list when no GPUs available."""
+        mock_data = {
+            "machineTypes": [
+                {
+                    "dataCenterId": "dc-1",
+                    "machineType": "intel-broadwell",
+                    "cpuModel": "Broadwell",
+                    "gpuModel": "",
+                    "gpuModelId": "",
+                    "totalGpuFree": 0,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            gpus = await sdk.get_gpus_for_datacenter(datacenter_id="dc-1")
+            assert len(gpus) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_gpus_for_datacenter_excludes_zero_free(self, sdk, mock_response):
+        """Test that GPU types with 0 free GPUs are excluded."""
+        mock_data = {
+            "machineTypes": [
+                {
+                    "dataCenterId": "dc-1",
+                    "machineType": "epyc-genoa-a100",
+                    "cpuModel": "AMD EPYC",
+                    "gpuModel": "A100 80GB PCIe",
+                    "gpuModelId": "nvidia-a100-pcie",
+                    "totalGpuFree": 0,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            gpus = await sdk.get_gpus_for_datacenter(datacenter_id="dc-1")
+            assert len(gpus) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_metal_nodes_for_datacenter(self, sdk, mock_response):
+        """Test get_metal_nodes_for_datacenter filters by datacenter."""
+        mock_data = {
+            "machineTypes": [
+                {
+                    "id": "sapphire-rapids-h100",
+                    "dataCenterId": "dc-1",
+                    "cpuCores": 72,
+                    "memoryGib": 1024,
+                    "gpus": 8,
+                    "gpuModelId": "nvidia-h100",
+                },
+                {
+                    "id": "epyc-genoa-l40s",
+                    "dataCenterId": "dc-1",
+                    "cpuCores": 96,
+                    "memoryGib": 1538,
+                    "gpus": 8,
+                    "gpuModelId": "nvidia-l40s",
+                },
+                {
+                    "id": "bm-standard-1",
+                    "dataCenterId": "dc-2",
+                    "cpuCores": 32,
+                    "memoryGib": 128,
+                    "gpus": 0,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            nodes = await sdk.get_metal_nodes_for_datacenter(datacenter_id="dc-1")
+            assert len(nodes) == 2
+            assert nodes[0].id == "sapphire-rapids-h100"
+            assert nodes[0].cpu_cores == 72
+            assert nodes[1].id == "epyc-genoa-l40s"
+            assert nodes[1].memory_gib == 1538
+
+    @pytest.mark.asyncio
+    async def test_get_metal_nodes_for_datacenter_empty(self, sdk, mock_response):
+        """Test get_metal_nodes_for_datacenter returns empty list for unknown datacenter."""
+        mock_data = {
+            "machineTypes": [
+                {
+                    "id": "bm-standard-1",
+                    "dataCenterId": "dc-1",
+                    "cpuCores": 32,
+                    "memoryGib": 128,
+                },
+            ]
+        }
+        with patch.object(sdk.client, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_response(mock_data)
+            nodes = await sdk.get_metal_nodes_for_datacenter(datacenter_id="dc-nonexistent")
+            assert len(nodes) == 0
+
+
 class TestSecurityGroupRules:
     @pytest.mark.asyncio
     async def test_create_security_group_rule(self, sdk, mock_response):

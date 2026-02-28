@@ -111,6 +111,19 @@ Data center disk pool pricing.
 
 ---
 
+## GpuModel
+
+GPU model available for virtual machines.
+
+**Fields:**
+
+- `id`: <class 'str'>
+- `vendor_name`: typing.Optional[str]
+- `model_name`: typing.Optional[str]
+- `memory_gib`: typing.Optional[int]
+
+---
+
 ## Image
 
 VM or machine image.
